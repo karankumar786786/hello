@@ -7,7 +7,6 @@ pipeline {
     }
 
     stages {
-
         stage('clone') {
             steps {
                 git branch: 'main',
@@ -30,7 +29,6 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
-
                     sh '''
                     echo $DOCKER_PASSWORD | docker login \
                     -u $DOCKER_USER \
@@ -50,12 +48,17 @@ pipeline {
 
         stage('deploy') {
             steps {
-                sh '''
-                docker compose down || true
-                docker compose up -d
-                '''
+                withCredentials([file(
+            credentialsId: 'hello-env',
+            variable: 'ENV_FILE'
+        )]) {
+                    sh '''
+            cp $ENV_FILE .env
+            docker compose down || true
+            docker compose up -d
+            '''
+        }
             }
         }
-
     }
 }
