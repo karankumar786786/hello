@@ -3,62 +3,69 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'karankumar9955/hello'
-        IMAGE_TAG = 'latest'
+        IMAGE_TAG  = 'latest'
     }
 
     stages {
-        stage('clone') {
+
+        stage('Clone') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/karankumar786786/hello.git'
+                checkout scmGit(
+                    branches: [[name: 'main']],
+                    userRemoteConfigs: [[url: 'https://github.com/karankumar786786/hello.git']]
+                )
             }
         }
 
-        stage('build') {
+        stage('Build') {
             steps {
-                sh '''
-                docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                '''
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('docker login') {
+        stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerHubCredential',   // fixed here
+                    credentialsId: 'dockerHubCredential',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
-                    sh '''
-                    echo $DOCKER_PASSWORD | docker login \
-                    -u $DOCKER_USER \
-                    --password-stdin
-                    '''
+                    sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
 
-        stage('push image') {
+        stage('Push Image') {
             steps {
-                sh '''
-                docker push $IMAGE_NAME:$IMAGE_TAG
-                '''
+                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
 
-        stage('deploy') {
+        stage('Deploy') {
             steps {
                 withCredentials([file(
-            credentialsId: 'hello-env',
-            variable: 'ENV_FILE'
-        )]) {
+                    credentialsId: 'hello-env',
+                    variable: 'ENV_FILE'
+                )]) {
                     sh '''
-            cp $ENV_FILE .env
-            docker compose down || true
-            docker compose up -d
-            '''
-        }
+                        cp $ENV_FILE .env
+                        docker compose down || true
+                        docker compose up -d
+                    '''
+                }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully! Image: ${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo "Pipeline failed. Check logs above."
+        }
+        always {
+            sh 'docker logout || true'
         }
     }
 }
