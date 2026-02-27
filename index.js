@@ -5,7 +5,7 @@ config();
 
 app.get("/", (req, res) => {
   return res.status(200).json({
-    message: "hello bro",
+    message: "hello brother",
   });
 });
 
